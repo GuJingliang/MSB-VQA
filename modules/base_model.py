@@ -118,7 +118,7 @@ class VQBD(nn.Module):
             pred_QBM = self.QBM(v, q, gen)
             return pred_QBM
 
-        elif config.use_QBM and config.use_VBM is False :
+        elif config.use_VBM and config.use_QBM is False :
             pred_VBM= self.VBM(v, q, gen)
             return pred_VBM
         
