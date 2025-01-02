@@ -128,89 +128,6 @@ def contrastive_loss(fea, pos_fea, neg_fea, tao=1):
 
     return loss.mean()
 
-def visualize(dataloader, indexs, atts, answers, preds):
-    label2ans = dataloader.dataset.label2ans
-    entries = dataloader.dataset.entries
-    for i in indexs:
-        entry = entries[i]
-
-        _, spatials = dataloader.dataset.load_image(entry['image'])
-        question = entry['question']
-        image_id = entry['image_id']
-        att = atts[i]
-        
-        att_topk_values, att_topk_indices = torch.topk(att.view(-1), k=3)
-        
-        ans = answers[i]
-        pred = preds[i]
-        gt_ans = label2ans[torch.argmax(ans)]
-        pred_ans = label2ans[torch.argmax(pred)]
-        print('question:', question)
-        print('gt:', gt_ans)
-        print('pred:', pred_ans)
-        sets = 'train2014' #or 'val2014'
-        image_address = "/home/sdc1/gjl/dataset/COCO_images/%s/COCO_%s_%s.jpg"%(sets, sets, str(image_id).zfill(12))
-        if not os.path.exists(image_address):
-            sets = 'val2014'
-            image_address = "/home/sdc1/gjl/dataset/COCO_images/%s/COCO_%s_%s.jpg"%(sets, sets, str(image_id).zfill(12))
-        print(image_address)
-        print('\n')
-        image = mpimg.imread(image_address)
-        #most_att_spatial = np.concatenate((scaled_x, scaled_y, scaled_x + scaled_width, scaled_y + scaled_height, scaled_width, scaled_height), axis=1)参数为比例而不是具体值
-        image_height, image_width = image.shape[0], image.shape[1]
-       
-        fig, ax = plt.subplots()
-
-        ax.imshow(image)
-        color = ['r', 'g', 'b']
-        for j in range(len(att_topk_indices)):
-            spatial = spatials[att_topk_indices[j]]
-            x, y, width, height = spatial[0], spatial[1], spatial[4], spatial[5]
-            x, y, width, height = x * image_width, y * image_height, width * image_width, height * image_height
-            rect = plt.Rectangle((x, y), width, height, linewidth=2, edgecolor=color[j], facecolor='none')
-            ax.add_patch(rect)
-            
-            
-            att_value = att_topk_values[j].item()
-            ax.text(x, y, f'{att_value:.2f}', color=color[j], fontsize=12, weight='bold')
-            
-        
-        plt.axis('off')
-        plt.show()
-
-def var_name(var,all_var=locals()):
-    return [var_name for var_name in all_var if all_var[var_name] is var][0]
-
-def get_pred(dataloader, indexs, preds, name):
-    label2ans = dataloader.dataset.label2ans
-    entries = dataloader.dataset.entries
-    preds=torch.softmax(preds, dim=1)
-    for i in range(len(indexs)):
-        index = indexs[i]
-        entry = entries[index]
-        question = entry['question']
-        image_id = entry['image_id']
-
-        if  "color" not in question or "banana" not in question:
-            continue
-        
-        print(name,":")
-        
-        sets = 'train2014' #or 'val2014'
-        image_address = "/home/sdc1/gjl/dataset/COCO_images/%s/COCO_%s_%s.jpg"%(sets, sets, str(image_id).zfill(12))
-        if not os.path.exists(image_address):
-            sets = 'val2014'
-            image_address = "/home/sdc1/gjl/dataset/COCO_images/%s/COCO_%s_%s.jpg"%(sets, sets, str(image_id).zfill(12))
-        print(image_address)
-        print(question)
-        pred = preds[i]
-        _, labels = torch.topk(pred, k=3, dim=-1)
-
-        print([pred[label].item() for label in labels])
-        print([label2ans[label] for label in labels])
-        print('\n')
-
-
 def train(model, vqbd_model, discriminator, optim, optim_VQBD, optim_D, train_loader, loss_fn, tracker, logger, epoch, args):
     loader = tqdm(train_loader, ncols=0)
     loss_trk = tracker.track('loss', tracker.MovingMeanMonitor(momentum=0.99))
@@ -234,12 +151,8 @@ def train(model, vqbd_model, discriminator, optim, optim_VQBD, optim_D, train_lo
         optim.zero_grad()
         joint_repr, clf_logits, cos_logits, pred = model(v, q, config.use_margin)       
         
-     
-        
         if config.use_margin:
             loss += MarginLoss(clf_logits, cos_logits, mg, epoch, a, f1)
-            
- 
             
         if config.use_QBM or config.use_VBM:
             # train G model
@@ -288,8 +201,6 @@ def train(model, vqbd_model, discriminator, optim, optim_VQBD, optim_D, train_lo
             ce_loss = ce_loss.sum(dim=-1).mean() 
             loss += ce_loss
 
-        
-        
         if config.use_supcon:
             gt = torch.argmax(a, 1)
             loss += compute_supcon_loss(joint_repr, gt)
@@ -301,9 +212,6 @@ def train(model, vqbd_model, discriminator, optim, optim_VQBD, optim_D, train_lo
 
         # done training target model
 
-        
-        
-        
         batch_score = compute_score_with_logits(pred, a.data)
 
         fmt = '{:.4f}'.format
@@ -329,15 +237,7 @@ def evaluate(model, dataloader, epoch=0, write=True, logger=None):
     total_number = 0
     total_other = 0 
 
-    ####################
-    '''
-    embs = None
-    labels = None
-    answer_types = ()
-    q_types = ()
-    '''
-    ####################
-    #count = torch.zeros(3129)
+    
     for v, q, a, mg, _, qids, _, qtype, answer_type, indexs in tqdm(dataloader, ncols=0, leave=True):
         v = v.cuda()
         q = q.cuda()
@@ -346,28 +246,9 @@ def evaluate(model, dataloader, epoch=0, write=True, logger=None):
 
        
         joint_repr, clf_logits, cos_logits, pred = model(v, q, config.use_margin)    
-        
-        
-        #get_pred(dataloader, indexs, clf_logits, "clf_logits")
-        #get_pred(dataloader, indexs, cos_logits, "cos_logits")
-        #get_pred(dataloader, indexs, pred, "pred")
-       
-     
+
         batch_score = compute_score_with_logits(pred, a.cuda())
-        #################################
-        '''
-        answer_types += answer_type
-        q_types += qtype
-        
-        if embs is None:
-            embs = joint_repr.detach().cpu()
-            labels = a.detach().cpu()
-        else:
-            embs = torch.cat((embs, joint_repr.detach().cpu()), 0)
-            labels = torch.cat((labels, a.detach().cpu()), 0)
-        
-        '''
-        #################################
+
         score_all += batch_score.sum()
 
         qids = qids.detach().cpu().int().numpy()
@@ -391,19 +272,6 @@ def evaluate(model, dataloader, epoch=0, write=True, logger=None):
         if write:
             results = saved_for_eval(dataloader, results, qids, pred)
     
-        # visualize the attention
-        # visualize(dataloader, indexs, att, a, pred)  
-         
-    ############################
-    '''       
-    with open('q_types.pkl', 'wb') as f:
-            pickle.dump(q_types, f)
-    with open('answer_types.pkl', 'wb') as f:
-            pickle.dump(answer_types, f)
-    torch.save(embs,"embs_ce.pth") 
-    #torch.save(labels,"labels.pth")
-    ''' 
-    ############################
     
     score_all = score_all / len(dataloader.dataset)
     score_yesno /= total_yesno
