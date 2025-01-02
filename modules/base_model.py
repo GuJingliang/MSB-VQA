@@ -93,13 +93,10 @@ class BaseModel(nn.Module):
 
         q_repr = self.q_net(q_emb)
         v_repr = self.v_net(v_emb)
-        joint_repr = q_repr * v_repr #Final multimodal features, denoted as x in the main paper. This is the UpDn model.
+        joint_repr = q_repr * v_repr 
 
-        #This is the bias injecting component, as shown in subsection 3.4 of the main paper
         clf_logits = self.weight(joint_repr)
-        #q_logits = self.qweight(joint_repr)
         
-        #return att, joint_repr, clf_logits
         return joint_repr, clf_logits
 
     
@@ -107,7 +104,6 @@ class VQBD(nn.Module):
     def __init__(self, num_hid, dataset):
         super(VQBD, self).__init__()
        
-        #self.classifier = weight_norm(nn.Linear(dataset.num_ans_candidates* 2, dataset.num_ans_candidates), dim=None)
         if config.use_QBM:
             self.QBM = Question_Bias_Model(num_hid, dataset)
         if config.use_VBM:
@@ -125,10 +121,7 @@ class VQBD(nn.Module):
         elif config.use_QBM and config.use_VBM:
             pred_QBM = self.QBM(v, q, gen)
             pred_VBM= self.VBM(v, q, gen)
-            
-            
-            #pred_bias = self.classifier(torch.cat((pred_QBM, pred_VBM), 1))
-           
+    
             pred_bias = pred_QBM + pred_VBM
             return  pred_bias
 
