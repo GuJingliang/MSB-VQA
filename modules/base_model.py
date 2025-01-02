@@ -34,36 +34,7 @@ def normal_init(m, mean, std):
         m.weight.data.fill_(1)
         if m.bias.data is not None:
             m.bias.data.zero_()
-"""
-def get_pred(dataloader, indexs, preds, name):
-    label2ans = dataloader.dataset.label2ans
-    entries = dataloader.dataset.entries
-    preds=torch.softmax(preds, dim=1)
-    for i in range(len(indexs)):
-        index = indexs[i]
-        entry = entries[index]
-        question = entry['question']
-        image_id = entry['image_id']
 
-        if  "color" not in question or "banana" not in question:
-            continue
-        
-        print(name,":")
-        
-        sets = 'train2014' #or 'val2014'
-        image_address = "/home/sdc1/gjl/dataset/COCO_images/%s/COCO_%s_%s.jpg"%(sets, sets, str(image_id).zfill(12))
-        if not os.path.exists(image_address):
-            sets = 'val2014'
-            image_address = "/home/sdc1/gjl/dataset/COCO_images/%s/COCO_%s_%s.jpg"%(sets, sets, str(image_id).zfill(12))
-        print(image_address)
-        print(question)
-        pred = preds[i]
-        _, labels = torch.topk(pred, k=3, dim=-1)
-
-        print([pred[label].item() for label in labels])
-        print([label2ans[label] for label in labels])
-        print('\n')
-"""
 class BaseModel(nn.Module):
     def __init__(self, w_emb, q_emb, v_att, q_net, v_net, fusion, num_hid, num_class):
         super(BaseModel, self).__init__()
