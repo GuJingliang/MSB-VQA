@@ -61,9 +61,9 @@ def MarginLoss(clf_logits, cos_logits, m, epoch, label, f1):
     step = config.alpha_step
     alpha =  (epoch // step) * 0.1
         
-    learned_mg = torch.where(m > 1e-12, clf_logits.double(), -1000.0).float()   # clf_logits
+    learned_mg = torch.where(m > 1e-12, clf_logits.double(), -1000.0).float()   
 
-    margin = F.softmax(learned_mg / temp, dim=1)   # -m_diff
+    margin = F.softmax(learned_mg / temp, dim=1)   
     
     m = torch.normal(mean=m, std=std)
 
